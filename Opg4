@@ -4,6 +4,8 @@
 # og hvor man kan regulere antallet af spillere. 
 # I skal vedlægge koden. Det gælder for alle tre opgaver.
 
+## FORARBEJDE TIL SHINY APP ##
+
 # benytter dataframen allshots - men sørger for det kun sæson 21/22 der er med. 
 allshots2122 <- allShots[allShots$seasonId %in% c("187502", "186215"),]
 
@@ -39,18 +41,21 @@ ggplot(tester, aes(x = reorder(player.name, -Antal_mål))) +
 ui <- fluidPage(
   titlePanel("Sammenligning af målscore og xG-sum for spillere"),
     fluidRow(
+      column(width = 2, offset = 0.5, #offset flytter mod højre
       selectInput("Antal_mål", "Flere mål end...:", 
                   choices = c("Alle", unique(all_goals_and_xG$Antal_mål)),
-                  selected = "15")
+                  selected = "15"))
     ),
     fluidRow(
+      column(width = 11, #benyttes til at tilrette appen
       plotOutput("player_plot")
     )
+  )
 )
 
 server <- function(input, output) {
-
-# opdatering af plottet
+  
+# Funktion til at opdatere plottet baseret på antallet af mål valgt
   output$player_plot <- renderPlot({
     if (input$Antal_mål == "Alle") {
       filtered_data <- all_goals_and_xG
@@ -68,7 +73,10 @@ server <- function(input, output) {
   })
 }
 
+# Kør Shiny-app
 shinyApp(ui = ui, server = server)
+
+
 
 
 
