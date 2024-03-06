@@ -1,0 +1,75 @@
+### OPGAVE 4 - SHINY ###
+### OPGAVE 4.1 #### 
+# Lav en dynamisk webapp hvor man ser et bar-plot af spillerens samlede målscore og xG-sum
+# og hvor man kan regulere antallet af spillere. 
+# I skal vedlægge koden. Det gælder for alle tre opgaver.
+
+# benytter dataframen allshots - men sørger for det kun sæson 21/22 der er med. 
+allshots2122 <- allShots[allShots$seasonId %in% c("187502", "186215"),]
+
+# frame der kun indeholder mål 
+goals2122 <- allshots2122[allshots2122$shot.isGoal %in% "TRUE",]
+
+# frame der indeholder antal mål pr. spiller 
+player_goals <- goals2122 %>% count(goals2122$player.name, sort = TRUE) 
+colnames(player_goals) <- c("player.name", "Antal_mål")
+
+# finder summen af xG
+player_xG <- goals2122 %>% group_by(player.name) %>% summarise(sum_shot_xg = sum(shot.xg, na.rm = TRUE))
+
+# sammensætter de to dataframes - så vi samlet har alle mål og summeret xG fra sæson 21/22
+all_goals_and_xG <- left_join(player_goals, player_xG, by = "player.name")
+
+tester <- all_goals_and_xG[1:10,]
+
+# Forsøger mig med et plot 
+
+ggplot(tester, aes(x = reorder(player.name, -Antal_mål))) +
+  geom_bar(aes(y = Antal_mål), stat = "identity", fill = "purple4", group = 1) +
+  geom_point(aes(y = sum_shot_xg, color = "Sum af xG"), group = 1) +
+  scale_color_manual(name = "", values = c("Sum af xG" = "white")) +
+  theme(axis.text.x = element_text(angle = 75, vjust = 1, hjust = 1))+
+  scale_y_continuous(name = "Antal mål", breaks = seq(0, 20, 5), limits = c(0, 20))+
+  labs(x = "Spillernavn")
+  
+
+### SHINY APP ###
+
+# UI for appen
+ui <- fluidPage(
+  titlePanel("Sammenligning af målscore og xG-sum for spillere"),
+    fluidRow(
+      selectInput("Antal_mål", "Flere mål end...:", 
+                  choices = c("Alle", unique(all_goals_and_xG$Antal_mål)),
+                  selected = "15")
+    ),
+    fluidRow(
+      plotOutput("player_plot")
+    )
+)
+
+server <- function(input, output) {
+
+# opdatering af plottet
+  output$player_plot <- renderPlot({
+    if (input$Antal_mål == "Alle") {
+      filtered_data <- all_goals_and_xG
+    } else {
+      filtered_data <- subset(all_goals_and_xG, Antal_mål >= as.numeric(input$Antal_mål))
+    }
+    
+    ggplot(filtered_data, aes(x = reorder(player.name, -Antal_mål))) +
+      geom_bar(aes(y = Antal_mål), stat = "identity", fill = "purple4", group = 1) +
+      geom_point(aes(y = sum_shot_xg, color = "Sum af xG"), group = 1) +
+      scale_color_manual(name = "", values = c("Sum af xG" = "white")) +
+      theme(axis.text.x = element_text(angle = 75, vjust = 1, hjust = 1)) +
+      scale_y_continuous(name = "Antal mål", breaks = seq(0, 20, 5), limits = c(0, 20)) +
+      labs(x = "Spillernavn")
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+
+
+
