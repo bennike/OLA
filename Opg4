@@ -79,5 +79,57 @@ shinyApp(ui = ui, server = server)
 
 
 
+#### OPGAVE 4.2 #### 
+liga_valg <- unique(allpasses2122$competitionId)
+liga_navne <- c("Polen" = 692, "Holland" = 635) # Erstat "ErstatMedDenRigtigeID" med det korrekte ID
+
+ui <- fluidPage(
+  titlePanel("Afleveringsanalyse"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("liga", "Vælg en liga:",
+                  choices = liga_navne),
+      uiOutput("kampDropdown")
+    ),
+    mainPanel(
+      plotOutput("passPlot")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  # Dynamisk opdater dropdown baseret på liga valg
+  output$kampDropdown <- renderUI({
+    liga_id <- input$liga
+    kamp_valg <- unique(allpasses2122[allpasses2122$competitionId == liga_id, ]$label)
+    selectInput("label", "Vælg kamp:", choices = kamp_valg)
+    selectizeInput("label", "Vælg kamp:", choices = kamp_valg, options = list(placeholder = 'Vælg eller søg efter en kamp', onInitialize = I('function() { this.setValue(""); }')))
+  })
+  
+  output$passPlot <- renderPlot({
+    # Filtrer datasettet for den valgte kamp
+    selectedMatch <- subset(allpasses2122, label == input$label)
+    
+    # Forbered data for plotting
+    passes <- transform(selectedMatch, accurate = ifelse(pass.accurate, "Korrekte", "Fejl"))
+    passCount <- table(passes$team.name, passes$accurate)
+    
+    # Generer bar-plot
+    ggplot(data = as.data.frame(passCount), aes(Var1, Freq, fill = Var2)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      theme_minimal() +
+      labs(title = paste("Afleveringsanalyse for kamp", input$label),
+           x = "Hold",
+           y = "Antal afleveringer",
+           fill = "Afleveringstype") +
+      scale_fill_manual(values = c("Korrekte" = "springgreen4", "Fejl" = "red3"))
+  })
+}
+
+# Kør applikationen
+shinyApp(ui = ui, server = server)
+
+
+
 
 
