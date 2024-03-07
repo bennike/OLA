@@ -73,7 +73,7 @@ server <- function(input, output) {
   })
 }
 
-# Kør Shiny-app
+
 shinyApp(ui = ui, server = server)
 
 
@@ -81,7 +81,7 @@ shinyApp(ui = ui, server = server)
 
 #### OPGAVE 4.2 #### 
 liga_valg <- unique(allpasses2122$competitionId)
-liga_navne <- c("Polen" = 692, "Holland" = 635) # Erstat "ErstatMedDenRigtigeID" med det korrekte ID
+liga_navne <- c("Polen" = 692, "Holland" = 635) 
 
 ui <- fluidPage(
   titlePanel("Afleveringsanalyse"),
@@ -110,11 +110,11 @@ server <- function(input, output, session) {
     # Filtrer datasettet for den valgte kamp
     selectedMatch <- subset(allpasses2122, label == input$label)
     
-    # Forbered data for plotting
+    # gør data klar til plot
     passes <- transform(selectedMatch, accurate = ifelse(pass.accurate, "Korrekte", "Fejl"))
     passCount <- table(passes$team.name, passes$accurate)
     
-    # Generer bar-plot
+    # laver bar-plot
     ggplot(data = as.data.frame(passCount), aes(Var1, Freq, fill = Var2)) +
       geom_bar(stat = "identity", position = "dodge") +
       theme_minimal() +
@@ -126,7 +126,59 @@ server <- function(input, output, session) {
   })
 }
 
-# Kør applikationen
+
+shinyApp(ui = ui, server = server)
+
+
+
+#### OPGAVE 4.3 ####
+# Tilføjelse af en ny kolonne 'shot.outcome' til allshots-datasættet
+allshots2122$shot.outcome <- ifelse(grepl("goal", allshots2122$type.secondary), "Goal","Other")
+
+# Tilføjer en ny kolonne "shot.outcome" baseret på om skuddet var et mål eller ikke.
+shots2122$shot.outcome <- ifelse(shots2122$shot.isGoal, "Goal", "Other"))
+
+
+# Difinition af ligaer
+liga_navne <- c("Polen" = 692, "Holland" = 635)
+
+ui <- fluidPage(
+  titlePanel("Skudanalyse"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("liga", "Vælg en liga:", choices = liga_navne),
+      uiOutput("kampDropdown")
+    ),
+    mainPanel(
+      plotOutput("shotPlot")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  # opdaterer dropdown baseret på liga valg
+  output$kampDropdown <- renderUI({
+    liga_id <- input$liga
+    kamp_valg <- unique(allshots2122[allshots2122$competitionId == liga_id, ]$label)
+    selectizeInput("label", "Vælg kamp:", choices = kamp_valg, options = list(placeholder = 'Vælg eller søg efter en kamp', onInitialize = I('function() { this.setValue(""); }')))
+  })
+  
+  output$shotPlot <- renderPlot({
+    # Filtrer på den valgte kamp
+    selectedMatch <- subset(allshots2122, label == input$label)
+    
+    #  skud-plot
+    ggplot(selectedMatch, aes(x = location.x, y = location.y, color = shot.outcome, shape = team.name)) +
+      annotate_pitch(fill = "springgreen4", colour = "white") +
+      geom_point(alpha = 0.7, size =3) +
+      scale_color_manual(values = c("Other" = "black", "Goal" = "red")) +
+      coord_cartesian(xlim = c(50, 100)) +
+      labs(x = "Banens bredde",
+           y = "Banens længde",
+           color = "Outcome")
+  })
+}
+
 shinyApp(ui = ui, server = server)
 
 
